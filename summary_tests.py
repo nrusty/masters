@@ -1,8 +1,9 @@
-from tpot import TPOTClassifier
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
+import tensorflow as tf
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 import torch
 from tpot.config import classifier_config_nn
@@ -13,18 +14,7 @@ from sklearn.impute import SimpleImputer
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import SGD
-from keras.utils import np_utils
-from keras.wrappers.scikit_learn import KerasClassifier
 
-
-from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
-
-
-import argparse
-
-import tensorflow as tf
-from sklearn.neural_network import MLPClassifier
 
 def scale_data(df):
     X = np.zeros((len(df.index), len(df.columns)))
@@ -36,15 +26,29 @@ def scale_data(df):
     dfX = pd.DataFrame(X, columns=tpot_data.columns.values)
     return dfX
 
-tpot_data = pd.read_csv('C:/Users/nrust/Downloads/dataset_001.csv', sep=',', usecols=[i for i in range(1,64)],
-                        dtype=np.float64, engine='python')
-tpot_data = tpot_data.replace([np.inf, -np.inf], np.nan).dropna(axis=1)
+
+sum4 = pd.read_csv(fr'C:\Users\nrust\Downloads\dict_009.csv') #, sep=",", parse_dates=[0],  dayfirst=True
+#, usecols=[i for i in range(1,36)]
+print(sum4.describe())
+sum4['QT'].replace('', np.nan, inplace=True)
+sum4.dropna(subset=['QT'], inplace=True)
+print(sum4.describe())
+N = sum4.shape[1] - 1
+print(N)
+
+#sum4 = sum4[sum4['HRConfidence'] > 10]
+
+tpot_data = sum4.replace([np.inf, -np.inf], np.nan)#.dropna(axis=1)
+print(tpot_data)
 dfX = scale_data(tpot_data)
 
-print(dfX[dfX['target'] == 1])
+hypo1 = dfX[dfX['target'] == 1]
+norm0 = dfX[dfX['target'] == 0]
+print('hypo\n', hypo1.describe())
+print('normal\n', norm0.describe())
 
 X_train, X_val, y_train, y_val = train_test_split(dfX.drop(columns=['target']), dfX['target'], test_size=0.2,
-                                                  random_state=10, stratify=dfX['target'])
+                                                  random_state=42, stratify=dfX['target'])
 
 dfX2 = pd.concat([X_train, y_train], axis=1, sort=False)
 validate = pd.concat([X_val, y_val], axis=1, sort=False)
@@ -58,8 +62,7 @@ test = pd.concat([X_test, y_test], axis=1, sort=False)
 #train, validate, test = np.split(dfX.sample(frac=1, random_state=42), [int(.75 * len(tpot_data)), int(.85 * len(tpot_data))])
 print(train.shape[0], validate.shape[0], test.shape[0])
 
-print(train[train['target'] == 1])
-
+print(validate[validate['target'] == 1])
 
 
 # start treat undersampled data
@@ -68,35 +71,34 @@ print(train[train['target'] == 1])
 print('Before \n', train['target'].value_counts())
 
 # separate minority and majority classes
-not_fraud = train[train['target'] == 0]
-fraud = train[train['target'] == 1]
+not_fraud = train[train['target'] == 1]
+fraud = train[train['target'] == 0]
 #fraud2 = tpot_data[tpot_data['target'] == 2]
 
 # upsample minority
 fraud_upsampled = resample(fraud,
                            replace=True,  # sample with replacement
-                           n_samples=len(not_fraud),  # match number in majority class
-                           random_state=42)  # reproducible results
+                           n_samples=len(not_fraud))#,  # match number in majority class
+                           #random_state=42)  # reproducible results
 
 
 # combine majority and upsampled minority
 upsampled = pd.concat([not_fraud, fraud_upsampled])
 
 # check new class counts
-print('After \n',upsampled['target'].value_counts())
-
+print('After \n', upsampled['target'].value_counts())
 
 # trying logistic regression again with the balanced dataset
 y_train = np.array(upsampled['target'])
-X_train = np.array(upsampled.iloc[:, :58])
+X_train = np.array(upsampled.iloc[:, :N])
 
 #print(train['target'].value_counts())
 # end of undersampled
 
-X_test = np.array(test.iloc[:, :58])
+X_test = np.array(test.iloc[:, :N])
 y_test = np.array(test['target'])
 
-X_validate = np.array(validate.iloc[:, :58])
+X_validate = np.array(validate.iloc[:, :N])
 y_validate = np.array(validate['target'])
 
 imputer = SimpleImputer(strategy="median")
@@ -105,13 +107,6 @@ X_train = imputer.transform(X_train)
 X_test = imputer.transform(X_test)
 X_validate = imputer.transform(X_validate)
 
-"""
-# integer encode
-label_encoder = LabelEncoder()
-y_train = label_encoder.fit_transform(y_train)
-y_test = label_encoder.fit_transform(y_test)
-y_validate = label_encoder.fit_transform(y_validate)
-"""
 # binary encode
 onehot_encoder = OneHotEncoder(sparse=False)
 y_train = y_train.reshape(len(y_train), 1)
@@ -126,20 +121,20 @@ y_validate = onehot_encoder.fit_transform(y_validate)
 
 
 # fix random seed for reproducibility
-seed = 42
-np.random.seed(seed)
+#seed = 4
+#np.random.seed(seed)
 
 # Create DL model
 model = Sequential()
-model.add(Dense(70, input_dim=58, activation='relu'))
+model.add(Dense(70, input_dim=N, activation='relu'))
 model.add(Dense(32, activation='relu'))
 model.add(Dense(2, activation="sigmoid")) #"softmax"
 
 # DNN model
 model.compile(loss='binary_crossentropy', optimizer=SGD(lr=0.0051), metrics=[tf.keras.metrics.Precision()])
 #binary_crossentropy
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=50, batch_size=50, shuffle=True)
-predictions = model.predict(X_test, batch_size=80)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=50, batch_size=40, shuffle=True)
+predictions = model.predict(X_test, batch_size=40)
 target_names = ['normal', 'hypo'] #, 'hyper'
 
 # summarize the first 5 cases
@@ -160,24 +155,3 @@ report_dnn_val = classification_report(y_validate.argmax(axis=1), validation.arg
 CM_val = confusion_matrix(y_validate.argmax(axis=1), validation.argmax(axis=1))
 print(report_dnn_val)
 print(CM_val)
-
-
-#tpot = TPOTClassifier(generations=5, population_size=20, cv=5,
-                                   # random_state=42, verbosity=2)
-#tpot = PytorchMLPClassifier(verbose=True, num_epochs=10)
-#tpot.fit(X_train, y_train)
-#print(tpot.score(X_test, y_test))
-
-#tpot.export('tpot_updateNN5001_pipeline.py')
-
-"""
-GradientBoostingClassifier(input_matrix, learning_rate=1.0, max_depth=7, max_features=0.25, min_samples_leaf=14, min_samples_split=20, n_estimators=100, subsample=0.55)
-DecisionTreeClassifier(MaxAbsScaler(XGBClassifier(input_matrix, learning_rate=0.01, max_depth=3, min_child_weight=2, n_estimators=100, n_jobs=1, subsample=0.9500000000000001, verbosity=0)), criterion=entropy, max_depth=6, min_samples_leaf=6, min_samples_split=9)
-XGBClassifier(FastICA(input_matrix, tol=0.75), learning_rate=0.5, max_depth=8, min_child_weight=7, n_estimators=100, n_jobs=1, subsample=0.6500000000000001, verbosity=0)
-GradientBoostingClassifier(PolynomialFeatures(input_matrix, degree=2, include_bias=False, interaction_only=False), learning_rate=0.5, max_depth=5, max_features=0.05, min_samples_leaf=1, min_samples_split=14, n_estimators=100, subsample=0.4)
-GradientBoostingClassifier(LogisticRegression(PCA(input_matrix, iterated_power=6, svd_solver=randomized), C=5.0, dual=False, penalty=l2), learning_rate=0.1, max_depth=4, max_features=0.25, min_samples_leaf=10, min_samples_split=3, n_estimators=100, subsample=0.7000000000000001)
-ExtraTreesClassifier(input_matrix, bootstrap=False, criterion=entropy, max_features=0.25, min_samples_leaf=4, min_samples_split=18, n_estimators=100)
-MLPClassifier(StandardScaler(input_matrix), alpha=0.0001, learning_rate_init=0.001)
-
-
-"""

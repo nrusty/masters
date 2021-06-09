@@ -5,7 +5,7 @@ import openpyxl
 import os
 import padasip as pa
 
-participant = '007'
+participant = '008'
 
 sampling_rate = 250
 
@@ -20,7 +20,7 @@ FeatECG = []
 #322 3 issue
 #3 issue on 007 Accel_2014-10-01-16-20...404 459 490 506 524 553
 # 009 64 117
-for i, file in enumerate(all_files[:1]):
+for i, file in enumerate(all_files[24:25]):
     x0 = pd.read_csv('C:/Users/nrust/Downloads/D1_test/' + participant + '/' + file, parse_dates=[0],
                      nrows=29998, engine='python')
     print(file)
@@ -69,8 +69,9 @@ for i, file in enumerate(all_files[:1]):
     #x2 = np.roll(x, -12)
     x2 = x
     d = x
-    x = np.stack((x, x), axis=-1)
+    #x = np.stack((x, x), axis=-1)
     x2 = np.stack((x2, x2), axis=-1)
+
 
     # identification
     a = a[:29998]
@@ -81,9 +82,31 @@ for i, file in enumerate(all_files[:1]):
     print(len(x2))
 
     # FilterNSSLMS, FilterLMS
-    f2 = pa.filters.FilterLMS(n=2, mu=0.08, w="random")  # filter for sum
-    f = pa.filters.FilterLMS(n=2, mu=0.05, w="random") # concatenate filter
+    #f2 = pa.filters.FilterLMS(n=2, mu=0.08, w="random")  # filter for sum
+    #f = pa.filters.FilterLMS(n=2, mu=0.05, w="random") # concatenate filter
+    """
+    f2 = pa.filters.FilterLMS(n=2, mu=0.0001, w="random")
+    t = np.arange(0, 29998, 1)
+    ysin = np.sin(0.01*t)
+    ynois = 0.1*ysin + 3*v #+ 3*l + 3*s
+    #plt.plot(0.1*ysin[100:])
+    plt.plot(ynois[100:]-8.75)
+    #plt.plot(a)
 
+    s2 = np.stack((ynois, ynois), axis=-1)
+    yfiltv, e, w = f2.run(v, s2)
+    #yfiltl, e, w = f2.run(l, s2)
+    #yfilts, e, w = f2.run(s, s2)
+    fapp = pa.filters.FilterLMS(n=2, mu=0.0001, w='zeros')
+    yfilt, e, w = fapp.run(v, s2)
+    plt.plot(20*(yfilt[100:]-1))
+    """
+
+    # FilterNSSLMS, FilterLMS original
+
+    #f = pa.filters.FilterLMS(n=2, mu=0.08, w="random")
+    f2 = pa.filters.FilterLMS(n=2, mu=0.04, w="random")
+    f = pa.filters.FilterRLS(n=2, mu=0.9, w="random")
 
     y, e, w = f2.run(a, x2)
     yv, ev, wv = f.run(v, x2)
@@ -94,19 +117,37 @@ for i, file in enumerate(all_files[:1]):
     yvl2 = np.stack((yvl, yvl), axis=-1)
     yvls, evls, wvls = f.run(s, yvl2)
 
-    f3 = pa.filters.FilterNLMS(n=3, mu=0.1, w="random")
-    b = x = np.stack((v, l, s), axis=-1)
-    x3 = np.stack((x, x, x), axis=-1)
-    #y3, e3, w3 = f3.run(b, x3)
+    print('Before')
+    print(x2)
+    x2 = pa.input_from_history(x, 5)
+    print('AFter')
+    a = a[:29994]
+    print(len(a), len(x2))
+
+    f3 = pa.filters.FilterNLMS(n=5, mu=0.1, w="random")
+    y, e3, w3 = f3.run(a, x2)
 
     filtECG = x0
-    filtECG['EcgWaveform'] = y * 2000
+    filtECG['EcgWaveform'][:29994] = y * 2000
     #filtECG['EcgWaveform'] = y * 2000
     # filtECG2['EcgWaveform'] = yvls*2000
     #filtECG.to_csv(fr'C:\Users\nrust\Downloads\%s_flt2_%s.csv' % (participant, file), sep=",", index=False)
     #filtECG.to_csv(fr'C:\Users\nrust\Downloads\D0_test\%s\flt_%s.csv' % (participant, file), sep=",", index=False)
     #show_results()
 
+plt.figure(figsize=(15, 9))
+plt.subplot(111);
+plt.title("Adaptation")  # ;plt.xlabel("samples - k")
+plt.xlabel('samples')
+plt.ylabel('ECG amplitude')
+plt.ylim(0.4, 1.5)
+plt.plot(d[510:6510]+0.1, "k", label="d - input");
+plt.legend()
+plt.plot(y[510:6510]+0.3, "b", label="y - sum");
+plt.legend()
+plt.plot(yvls[510:6510]-0.4, "g", label="y - concatenate");
+plt.legend()
+plt.show()
 
 # show results
 #def show_results(self):
@@ -132,18 +173,18 @@ plt.figure(figsize=(15, 9))
 plt.subplot(211);
 plt.title("Adaptation")  # ;plt.xlabel("samples - k")
 plt.ylim(0, 2)
-plt.plot(d[10:]-0.15, "b", label="d - input");
+plt.plot(d[510:6510]-0.15, "k", label="d - input");
 plt.legend()
-plt.plot(y[10:], "k", label="y - sum");
+plt.plot(y[510:6510], "b", label="y - sum");
 plt.legend()
-plt.plot(yvls[10:], "g", label="y - concatenate");
+plt.plot(yvls[510:6510], "g", label="y - concatenate");
 plt.legend()
 
 plt.subplot(212);
 plt.title("Filter error")  # ;plt.xlabel("samples - k")
-plt.plot(10 * np.log10(e ** 2), "r", label="e - error [dB]");
+plt.plot(10 * np.log10(e ** 2), "b", label="e sum - error [dB]");
 plt.legend()
-plt.plot(10 * np.log10(evls ** 2), "g", label="e2 - error [dB]");
+plt.plot(10 * np.log10(evls ** 2), "g", label="e conc. - error [dB]");
 plt.legend()
 plt.tight_layout()
 plt.show()
