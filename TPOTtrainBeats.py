@@ -19,6 +19,11 @@ from keras.wrappers.scikit_learn import KerasClassifier
 
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import make_pipeline
+from tpot.export_utils import set_param_recursive
+
 
 
 import argparse
@@ -36,9 +41,9 @@ def scale_data(df):
     dfX = pd.DataFrame(X, columns=tpot_data.columns.values)
     return dfX
 
-tpot_data = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_001_partial171_255.csv', sep=',', usecols=[i for i in range(1,9)],
+tpot_data = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_009_all.csv', sep=',', usecols=[i for i in range(1,9)],
                         dtype=np.float64, engine='python')
-tpot_data['target'] = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_001_partial171_255.csv', sep=',', usecols=['target'],
+tpot_data['target'] = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_009_all.csv', sep=',', usecols=['target'],
                         dtype=np.float64, engine='python')
 tpot_data = tpot_data.replace([np.inf, -np.inf, np.nan], 0).dropna(axis=1)
 
@@ -113,67 +118,37 @@ X_train = imputer.transform(X_train)
 X_test = imputer.transform(X_test)
 X_validate = imputer.transform(X_validate)
 
+# Average CV score on the training set was: 0.7010039899271261
+tpot = make_pipeline(
+    PCA(iterated_power=10, svd_solver="randomized"),
+    RandomForestClassifier(bootstrap=False, criterion="entropy", max_features=0.55, min_samples_leaf=1, min_samples_split=19, n_estimators=100)
+)
+# Fix random state for all the steps in exported pipeline
+set_param_recursive(tpot.steps, 'random_state', 42)
+
 #tpot = TPOTClassifier(generations=5, population_size=20, cv=5,
-                                   # random_state=42, verbosity=2)
-#tpot = PytorchMLPClassifier(verbose=True, num_epochs=10)
-#tpot.fit(X_train, y_train)
-#print(tpot.score(X_test, y_test))
+                                    #random_state=42, verbosity=2)
+tpot.fit(X_train, y_train)
+print(tpot.score(X_test, y_test))
 
-#tpot.export('tpot_updateNN5001_pipeline.py')
+#tpot.export('tpot_beats_pipeline.py')
 
-"""
-# integer encode
-label_encoder = LabelEncoder()
-y_train = label_encoder.fit_transform(y_train)
-y_test = label_encoder.fit_transform(y_test)
-y_validate = label_encoder.fit_transform(y_validate)
-"""
-# binary encode
-onehot_encoder = OneHotEncoder(sparse=False)
-y_train = y_train.reshape(len(y_train), 1)
-y_train = onehot_encoder.fit_transform(y_train)
-
-y_test = y_test.reshape(len(y_test), 1)
-y_test = onehot_encoder.fit_transform(y_test)
-
-y_validate = y_validate.reshape(len(y_validate), 1)
-y_validate = onehot_encoder.fit_transform(y_validate)
-
-
-
-# fix random seed for reproducibility
-seed = 42
-np.random.seed(seed)
-
-# Create DL model
-model = Sequential()
-model.add(Dense(70, input_dim=train.shape[1]-2, activation='relu'))
-model.add(Dense(32, activation='relu'))
-model.add(Dense(2, activation="sigmoid")) #"softmax"
-
-# DNN model
-model.compile(loss='binary_crossentropy', optimizer=SGD(lr=0.0051), metrics=[tf.keras.metrics.Precision()])
-#binary_crossentropy
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=50, shuffle=True)
-predictions = model.predict(X_test, batch_size=80)
 target_names = ['normal', 'hypo'] #, 'hyper'
 
-# summarize the first 5 cases
-#for i in range(5):
-#    print('A => %d (expected %d)' % (predictions[i], y_test[i]))
-print(len(predictions))
 
 #inv_predictions = onehot_encoder.inverse_transform([np.argmax(predictions[:, 1])])
 #inv_predictions = label_encoder.inverse_transform([np.argmax(predictions[0, :])])
 
-report_dnn = classification_report(y_test.argmax(axis=1), predictions.argmax(axis=1), target_names=target_names)
-CM = confusion_matrix(y_test.argmax(axis=1), predictions.argmax(axis=1))
+results = tpot.predict(X_test)
+
+report_dnn = classification_report(y_test, results, target_names=target_names)
+CM = confusion_matrix(y_test, results)
 print(report_dnn)
 print(CM)
 print('#######   Validation   #######')
-validation = model.predict(X_validate, batch_size=80)
-report_dnn_val = classification_report(y_validate.argmax(axis=1), validation.argmax(axis=1), target_names=target_names)
-CM_val = confusion_matrix(y_validate.argmax(axis=1), validation.argmax(axis=1))
+validation = tpot.predict(X_validate)
+report_dnn_val = classification_report(y_validate, validation, target_names=target_names)
+CM_val = confusion_matrix(y_validate, validation)
 print(report_dnn_val)
 print(CM_val)
 
