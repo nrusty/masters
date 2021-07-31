@@ -41,9 +41,10 @@ def scale_data(df):
     dfX = pd.DataFrame(X, columns=tpot_data.columns.values)
     return dfX
 
-tpot_data = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_009_all.csv', sep=',', usecols=[i for i in range(1,9)],
+tpot_data = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_007_partial _bkp273.csv', sep=',', usecols=[i for i in range(1,9)],
                         dtype=np.float64, engine='python')
-tpot_data['target'] = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_009_all.csv', sep=',', usecols=['target'],
+
+tpot_data['target'] = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_007_partial _bkp273.csv', sep=',', usecols=['target'],
                         dtype=np.float64, engine='python')
 tpot_data = tpot_data.replace([np.inf, -np.inf, np.nan], 0).dropna(axis=1)
 

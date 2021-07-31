@@ -9,7 +9,7 @@ import padasip as pa
 
 plt.rcParams['figure.figsize'] = [15, 9]  # Bigger images
 
-participant = '005'
+participant = '008'
 
 sampling_rate = 250
 
@@ -30,9 +30,9 @@ print(ECGFeat.head())
 ECG_HRV = pd.DataFrame(HRVECG)
 ECG_QRS = pd.DataFrame(ECGQRS)
 # Loop through each file in the subject folder
-for i, file in enumerate(all_files[:]):
+for i, file in enumerate(all_files[89:90]):
     # Read the file
-    # file = file.replace('.csv.csv', '.csv')
+    #file = file.replace('.csv.csv', '.csv')
     print(i)
     print(file)
     data = pd.read_csv('C:/Users/nrust/Downloads/D0_test/' + participant + '/' + file)
@@ -54,6 +54,8 @@ for i, file in enumerate(all_files[:]):
     cleaned = nk.ecg_clean(ecg_signal, sampling_rate=250)
     #print(data['Time'][15000])
     cleaned = cleaned[1000:]
+    plt.plot(cleaned)
+    plt.show()
 
     if (np.median(cleaned**2) < 80 and np.std(cleaned**2) < 2500):
         plt.plot(cleaned)

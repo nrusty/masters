@@ -20,7 +20,7 @@ FeatECG = []
 #322 3 issue
 #3 issue on 007 Accel_2014-10-01-16-20...404 459 490 506 524 553
 # 009 64 117
-for i, file in enumerate(all_files[24:25]):
+for i, file in enumerate(all_files[553:]):
     x0 = pd.read_csv('C:/Users/nrust/Downloads/D1_test/' + participant + '/' + file, parse_dates=[0],
                      nrows=29998, engine='python')
     print(file)
@@ -39,11 +39,14 @@ for i, file in enumerate(all_files[24:25]):
     x0['EcgWaveform'] = x0['EcgWaveform'].astype('int')
 
     # Substitutes values higher than 2500 with 2000
-    x0["EcgWaveform"] = np.where(x0["EcgWaveform"] > 2500, 2000, x0["EcgWaveform"])
+    #plt.plot(x0["EcgWaveform"])
+    x0["EcgWaveform"] = np.where(x0["EcgWaveform"] > 0, x0["EcgWaveform"]*0.5, x0["EcgWaveform"])
+    #plt.plot(x0["EcgWaveform"])
+    #plt.show()
 
-    v0['Vertical'] = np.where(v0['Vertical'] > 2500, 2000, v0['Vertical'])
-    v0['Lateral'] = np.where(v0['Lateral'] > 2500, 2000, v0['Lateral'])
-    v0['Sagittal'] = np.where(v0['Sagittal'] > 2500, 2000, v0['Sagittal'])
+    v0['Vertical'] = np.where(v0['Vertical'] > 2500, v0['Vertical']*0.5, v0['Vertical'])
+    v0['Lateral'] = np.where(v0['Lateral'] > 2500, v0['Lateral']*0.5, v0['Lateral'])
+    v0['Sagittal'] = np.where(v0['Sagittal'] > 2500, v0['Sagittal']*0.5, v0['Sagittal'])
 
     x = x0['EcgWaveform'].to_numpy()
     v = v0['Vertical'].to_numpy()
@@ -102,10 +105,11 @@ for i, file in enumerate(all_files[24:25]):
     plt.plot(20*(yfilt[100:]-1))
     """
 
+
     # FilterNSSLMS, FilterLMS original
 
     #f = pa.filters.FilterLMS(n=2, mu=0.08, w="random")
-    f2 = pa.filters.FilterLMS(n=2, mu=0.04, w="random")
+    f2 = pa.filters.FilterLMS(n=2, mu=0.03, w="random")
     f = pa.filters.FilterRLS(n=2, mu=0.9, w="random")
 
     y, e, w = f2.run(a, x2)
@@ -117,23 +121,35 @@ for i, file in enumerate(all_files[24:25]):
     yvl2 = np.stack((yvl, yvl), axis=-1)
     yvls, evls, wvls = f.run(s, yvl2)
 
-    print('Before')
-    print(x2)
-    x2 = pa.input_from_history(x, 5)
-    print('AFter')
-    a = a[:29994]
-    print(len(a), len(x2))
+    #print('Before')
+    #print(x2)
+    #x2 = pa.input_from_history(x, 5)
+    #print('AFter')
+    #a = a[:29994]
+    #print(len(a), len(x2))
 
-    f3 = pa.filters.FilterNLMS(n=5, mu=0.1, w="random")
-    y, e3, w3 = f3.run(a, x2)
+    #f = pa.filters.AdaptiveFilter(model="LMS", n=5, mu=0.1, w="random")
+    #errors_e, mu_range = f.explore_learning(a, x2,
+    #                                        mu_start=0.1,
+    #                                        mu_end=1.,
+    #                                        steps=100, ntrain=0.5, epochs=1,
+    #                                        criteria="MAE")
+    #plt.plot(errors_e, mu_range)
+    #plt.show()
+    #breakpoint()
+
+    #f3 = pa.filters.FilterNLMS(n=5, mu=0.1, w="random")
+    #y, e3, w3 = f3.run(a, x2)
 
     filtECG = x0
-    filtECG['EcgWaveform'][:29994] = y * 2000
-    #filtECG['EcgWaveform'] = y * 2000
+    #filtECG['EcgWaveform'][:29994] = y * 2000
+    filtECG['EcgWaveform'] = y * 2000
     # filtECG2['EcgWaveform'] = yvls*2000
     #filtECG.to_csv(fr'C:\Users\nrust\Downloads\%s_flt2_%s.csv' % (participant, file), sep=",", index=False)
-    #filtECG.to_csv(fr'C:\Users\nrust\Downloads\D0_test\%s\flt_%s.csv' % (participant, file), sep=",", index=False)
+    filtECG.to_csv(fr'C:\Users\nrust\Downloads\D0_test\%s\flt_%s.csv' % (participant, file), sep=",", index=False)
     #show_results()
+
+""""
 
 plt.figure(figsize=(15, 9))
 plt.subplot(111);
@@ -189,3 +205,4 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 #    return self
+"""

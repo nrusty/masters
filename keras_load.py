@@ -9,8 +9,9 @@ from keras.layers import Dense, Input, Dropout, Convolution1D, MaxPool1D, Global
     concatenate
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
+from tensorflow import keras
 
-patient = '008'
+patient = '001'
 df_1 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_pos.csv" % patient, header=None)
 
 df_2 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_neg.csv" % patient, header=None)
@@ -19,22 +20,14 @@ df_2 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_neg.csv" % pa
 #df_2 = df_2[df_2[174] == 0]
 #print(len(df_1), len(df_2))
 #breakpoint()
-
-#df = df_2
 df = pd.concat([df_1, df_2])
 
 df_1 = df[df[174] == 1]
 df_2 = df[df[174] == 0]
 print(len(df_1), len(df_2))
 
-
-# shuffle the DataFrame rows
-df_1 = df_1.sample(frac=1, random_state=42)
-df_2 = df_2.sample(frac=1, random_state=42)
-df = pd.concat([df_1[:345], df_2[:345]])
-#df = pd.concat([df_1[:2420], df_2])
-df = df.dropna()
-print(df.describe())
+df = pd.concat([df_1, df_2[:2808]])
+#df = df.dropna()
 #df = df.iloc[1:]
 
 #df = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_partial.csv" % patient, header=None)
@@ -61,19 +54,19 @@ def get_model():
     nclass = 1
     inp = Input(shape=(174, 1))
     img_1 = Convolution1D(32, kernel_size=5, activation=activations.relu, padding="valid")(inp)
-    #img_1 = Convolution1D(32, kernel_size=5, activation=activations.relu, padding="valid")(img_1)
+    img_1 = Convolution1D(32, kernel_size=5, activation=activations.relu, padding="valid")(img_1)
     img_1 = MaxPool1D(pool_size=2)(img_1)
     img_1 = Dropout(rate=0.1)(img_1)
     img_1 = Convolution1D(64, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
-    #img_1 = Convolution1D(64, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
+    img_1 = Convolution1D(64, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
     img_1 = MaxPool1D(pool_size=2)(img_1)
     img_1 = Dropout(rate=0.1)(img_1)
     img_1 = Convolution1D(64, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
-    #img_1 = Convolution1D(64, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
+    img_1 = Convolution1D(64, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
     img_1 = MaxPool1D(pool_size=2)(img_1)
     img_1 = Dropout(rate=0.1)(img_1)
     img_1 = Convolution1D(512, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
-    #img_1 = Convolution1D(512, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
+    img_1 = Convolution1D(512, kernel_size=3, activation=activations.relu, padding="valid")(img_1)
     img_1 = GlobalMaxPool1D()(img_1)
     img_1 = Dropout(rate=0.2)(img_1)
 
@@ -89,15 +82,15 @@ def get_model():
     model.summary()
     return model
 
-model = get_model()
-file_path = "baseline_cnn008_half_ptbdb.h5"
-checkpoint = ModelCheckpoint(file_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-early = EarlyStopping(monitor='val_acc', mode="max", patience=15, verbose=1)
-redonplat = ReduceLROnPlateau(monitor='val_acc', mode="max", patience=10, verbose=2)
-callbacks_list = [checkpoint, early, redonplat]  # early
+model = keras.models.load_model("baseline_cnn007_v2_ptbdb.h5")
+file_path = "baseline_cnn007_v2_ptbdb.h5"
+#checkpoint = ModelCheckpoint(file_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+#early = EarlyStopping(monitor='val_acc', mode="max", patience=15, verbose=1)
+#redonplat = ReduceLROnPlateau(monitor='val_acc', mode="max", patience=10, verbose=2)
+#callbacks_list = [checkpoint, early, redonplat]  # early
 
 
-model.fit(X, Y, epochs=200, verbose=2, callbacks=callbacks_list, validation_split=0.1)
+#model.fit(X, Y, epochs=200, verbose=2, callbacks=callbacks_list, validation_split=0.1)
 model.load_weights(file_path)
 
 pred_train = model.predict(X)
