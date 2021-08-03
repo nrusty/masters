@@ -6,7 +6,7 @@ import os
 import padasip as pa
 import datetime
 
-participant = '008'
+participant = '009'
 
 sampling_rate = 250
 
@@ -28,19 +28,24 @@ print(glu['date_time'][:])
 for i, file in enumerate(all_files[:]):
     x0 = pd.read_csv('C:/Users/nrust/Downloads/D0_test/' + participant + '/' + file, parse_dates=[0], dayfirst=True,
                      nrows=29998, engine='python')
-    print(file)
-    print(x0['Time'][15001])
-    a = glu[abs(glu['date_time'] - x0['Time'][15001]) < datetime.timedelta(milliseconds=7)] #
-    print(a.index.values)
+    #print(file)
+    #print(x0['Time'][15001])
+    a = glu[abs(glu['date_time'] - x0['Time'][15001]) < datetime.timedelta(milliseconds=149001)] #
+    #print(a.index.values)
 
     if (not a.empty):
-        if a['glucose'][a.index.values].item() > 4:
+        if len(a) > 1:
+            a = a[a['glucose'] == a['glucose'].min()]
+        if len(a) > 1:
+            a = a[a['type'] == 'cgm']
+        if len(a) > 1:
+            a = a.iloc[0]
+        if a['glucose'][a.index.values].item() > 3.9:
             a['comments'] = 0
         else:
             a['comments'] = 1
         target = target.append(a)
-        #print('target: ', target)
-    #print(i)
+
 print(target)
-target.to_csv(fr'C:\Users\nrust\Downloads\Target_%s.csv' % participant, sep=",",
+target.to_csv(fr'C:\Users\nrust\Downloads\Target_%s_new.csv' % participant, sep=",",
               index=False)

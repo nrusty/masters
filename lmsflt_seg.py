@@ -20,7 +20,7 @@ FeatECG = []
 #322 3 issue
 #3 issue on 007 Accel_2014-10-01-16-20...404 459 490 506 524 553
 # 009 64 117
-for i, file in enumerate(all_files[553:]):
+for i, file in enumerate(all_files[:]):
     x0 = pd.read_csv('C:/Users/nrust/Downloads/D1_test/' + participant + '/' + file, parse_dates=[0],
                      nrows=29998, engine='python')
     print(file)
@@ -65,9 +65,9 @@ for i, file in enumerate(all_files[553:]):
     Ms = max(s)
 
     x = x / Mx
-    v = v / Mv
-    l = l / Ml
-    s = s / Ms
+    #v = v / Mv
+    #l = l / Ml
+    #s = s / Ms
 
     #x2 = np.roll(x, -12)
     x2 = x
@@ -109,6 +109,9 @@ for i, file in enumerate(all_files[553:]):
     # FilterNSSLMS, FilterLMS original
 
     #f = pa.filters.FilterLMS(n=2, mu=0.08, w="random")
+    f3 = pa.filters.FilterLMS(n=2, mu=0.1, w="random")
+    y3, e3, w3 = f3.run(a, x2)
+
     f2 = pa.filters.FilterLMS(n=2, mu=0.03, w="random")
     f = pa.filters.FilterRLS(n=2, mu=0.9, w="random")
 
@@ -144,65 +147,68 @@ for i, file in enumerate(all_files[553:]):
     filtECG = x0
     #filtECG['EcgWaveform'][:29994] = y * 2000
     filtECG['EcgWaveform'] = y * 2000
+
     # filtECG2['EcgWaveform'] = yvls*2000
     #filtECG.to_csv(fr'C:\Users\nrust\Downloads\%s_flt2_%s.csv' % (participant, file), sep=",", index=False)
-    filtECG.to_csv(fr'C:\Users\nrust\Downloads\D0_test\%s\flt_%s.csv' % (participant, file), sep=",", index=False)
+    #filtECG.to_csv(fr'C:\Users\nrust\Downloads\D0_test\%s\flt_%s.csv' % (participant, file), sep=",", index=False)
     #show_results()
 
-""""
 
-plt.figure(figsize=(15, 9))
-plt.subplot(111);
-plt.title("Adaptation")  # ;plt.xlabel("samples - k")
-plt.xlabel('samples')
-plt.ylabel('ECG amplitude')
-plt.ylim(0.4, 1.5)
-plt.plot(d[510:6510]+0.1, "k", label="d - input");
-plt.legend()
-plt.plot(y[510:6510]+0.3, "b", label="y - sum");
-plt.legend()
-plt.plot(yvls[510:6510]-0.4, "g", label="y - concatenate");
-plt.legend()
-plt.show()
 
-# show results
-#def show_results(self):
-plt.subplot(311)
-plt.xlabel('samples')
-plt.ylabel('Acc. amplitude - Sagittal Axis')
-plt.plot(v0['Sagittal'][2000:8000])
+    plt.figure(figsize=(15, 9))
+    plt.subplot(111);
+    plt.title("Adaptation")  # ;plt.xlabel("samples - k")
+    plt.xlabel('samples')
+    plt.ylabel('ECG amplitude')
+    plt.ylim(0.4, 1.5)
+    plt.plot(d[450:6510]+0.15, "k", label="d - input");
+    plt.legend()
+    plt.plot(y[450:6510], "b", label="y - sum");
+    plt.legend()
+    #plt.plot(yvls[510:6510]*0, "g", label="y - concatenate");
+    plt.plot(y3[450:6510], "g", label="y - mu 0.003");
+    plt.legend()
+    plt.show()
 
-plt.subplot(312)
-plt.xlabel('samples')
-plt.ylabel('ECG amplitude')
-plt.plot(x0["EcgWaveform"][2000:8000])
-plt.subplot(312)
-plt.plot(filtECG['EcgWaveform'][2000:8000])
-plt.subplot(313)
-plt.plot(10 * np.log10(e ** 2), "r", label="e - error [dB]");
-plt.legend()
+    # show results
+    #def show_results(self):
+    plt.subplot(311)
+    plt.xlabel('samples')
+    plt.ylabel('Acc. amplitude - Sagittal Axis')
+    plt.plot(v0['Sagittal'][2000:8000])
 
-yvls = 1 -yvls + 1.2
-#y = 1 - y + 1
+    plt.subplot(312)
+    plt.xlabel('samples')
+    plt.ylabel('ECG amplitude')
+    plt.plot(x0["EcgWaveform"][2000:8000])
+    plt.subplot(312)
+    plt.plot(filtECG['EcgWaveform'][2000:8000])
+    plt.subplot(313)
+    plt.plot(10 * np.log10(e ** 2), "r", label="e - error [dB]");
+    plt.legend()
 
-plt.figure(figsize=(15, 9))
-plt.subplot(211);
-plt.title("Adaptation")  # ;plt.xlabel("samples - k")
-plt.ylim(0, 2)
-plt.plot(d[510:6510]-0.15, "k", label="d - input");
-plt.legend()
-plt.plot(y[510:6510], "b", label="y - sum");
-plt.legend()
-plt.plot(yvls[510:6510], "g", label="y - concatenate");
-plt.legend()
+    yvls = 1 -yvls + 1.2
+    #y = 1 - y + 1
 
-plt.subplot(212);
-plt.title("Filter error")  # ;plt.xlabel("samples - k")
-plt.plot(10 * np.log10(e ** 2), "b", label="e sum - error [dB]");
-plt.legend()
-plt.plot(10 * np.log10(evls ** 2), "g", label="e conc. - error [dB]");
-plt.legend()
-plt.tight_layout()
-plt.show()
+    plt.figure(figsize=(15, 9))
+    plt.subplot(211);
+    plt.title("Adaptation")  # ;plt.xlabel("samples - k")
+    plt.ylim(0, 2)
+    plt.plot(d[510:6510]-0.15, "k", label="d - input");
+    plt.legend()
+    plt.plot(y[510:6510], "b", label="y - sum");
+    plt.legend()
+    plt.plot(yvls[510:6510], "g", label="y - concatenate");
+    plt.legend()
+
+    plt.subplot(212);
+    plt.title("Filter error")  # ;plt.xlabel("samples - k")
+    plt.plot(10 * np.log10(e ** 2), "b", label="e sum - error [dB]");
+    plt.legend()
+    plt.plot(10 * np.log10(evls ** 2), "g", label="e conc. - error [dB]");
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 #    return self
+"""
 """

@@ -72,7 +72,7 @@ upsampled = pd.concat([not_hypo, hypo_upsampled])
 
 #print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-tpot = TPOTClassifier(verbosity=2, generations=5, scoring='f1_weighted') # max_time_mins=2
+tpot = TPOTClassifier(verbosity=2, generations=5, scoring='f1_macro') # max_time_mins=2
 
 #config_dict='TPOT cuML'
 
