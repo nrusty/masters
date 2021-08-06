@@ -9,7 +9,7 @@ import datetime
 
 plt.rcParams['figure.figsize'] = [15, 9]  # Bigger images
 
-participant = '008'
+participant = '005'
 
 sampling_rate = 250
 
@@ -39,10 +39,10 @@ heartbeats_all = pd.DataFrame(result)
 reset = 99
 # Loop through each file in the subject folder
 #already did from 303 002
-for i, file in enumerate(all_files[255:]):
+for i, file in enumerate(all_files[510:]):
     # Read the file
     data = pd.read_csv('C:/Users/nrust/Downloads/D0_test/' + participant + '/' + file, parse_dates=[0])
-    tpot_tgt = pd.read_csv('C:/Users/nrust/Downloads/Target_%s.csv' % participant, sep=',', parse_dates=[0], engine='python')
+    tpot_tgt = pd.read_csv('C:/Users/nrust/Downloads/Target_%s_new.csv' % participant, sep=',', parse_dates=[0], engine='python')
     tpot_tgt = tpot_tgt.rename(columns={"date_time": "date", "comments": "target"})
     file = file.replace('.csv.csv', '')
     file = file.replace('flt_ECG_', '')
@@ -73,7 +73,7 @@ for i, file in enumerate(all_files[255:]):
     ecg_signal_before = pd.DataFrame(data=x-2000, columns=['ECG'])
 
     ecg_signal = pd.DataFrame(data=x, columns=['ECG'])
-    ecg_signal = nk.ecg_clean(ecg_signal, sampling_rate=250, method="elgendi2010")
+    ecg_signal = nk.ecg_clean(ecg_signal, sampling_rate=250, method="neurokit")
     ecg_signal = pd.DataFrame(ecg_signal, columns=['ECG'])
     ecg_signal['ECG'] = ecg_signal['ECG'].astype('float')
     cleaned = nk.ecg_clean(ecg_signal_before, sampling_rate=250)
@@ -81,6 +81,7 @@ for i, file in enumerate(all_files[255:]):
     _, rpeaks = nk.ecg_peaks(cleaned, sampling_rate=250)
     HRV = nk.hrv(rpeaks, sampling_rate=250, show=True)
 
+    """
     with pd.option_context('display.max_columns', 50):
         print(HRV.head())
     plt.show()
@@ -111,6 +112,7 @@ for i, file in enumerate(all_files[255:]):
     plt.plot(crop, label = 'cleaned')
     plt.legend()
     plt.show()
+    
 
 
     cleaned2 = pd.DataFrame(cleaned)
@@ -127,6 +129,7 @@ for i, file in enumerate(all_files[255:]):
 
     #plt.show()
     breakpoint()
+    """
 
     # results.to_csv(fr'C:\Users\nrust\Downloads\rslt_%s_%s.csv' % (participant, file), index=False, na_rep='')
 

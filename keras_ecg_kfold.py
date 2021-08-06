@@ -10,6 +10,8 @@ from keras.layers import Dense, Input, Dropout, Convolution1D, MaxPool1D, Global
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
+from keras.utils.vis_utils import plot_model
+from sklearn.tree import export_graphviz
 
 
 # plot a histogram of each variable in the dataset
@@ -24,11 +26,11 @@ def plot_variable_distributions(trainX):
     plt.show()
 
 
-patient = '002'
-df_1 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_v4_pos.csv" % patient, header=None)
+patient = '008'
+df_1 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_pos.csv" % patient, header=None)
 # print(df_1.describe())
 
-df_2 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_v4_neg.csv" % patient, header=None)
+df_2 = pd.read_csv("C:/Users/nrust/PycharmProjects/d1namo/pivot_%s_neg.csv" % patient, header=None)
 # print(df_1[174])
 # df_1 = df_1[df_1[174] == 1]
 # df_2 = df_2[df_2[174] == 0]
@@ -47,6 +49,13 @@ size_acc = min(len(df_1), len(df_2))
 # shuffle the DataFrame rows
 df_1 = df_1.sample(frac=1, random_state=42)
 df_2 = df_2.sample(frac=1, random_state=42)
+
+for k in range(len(df_2)):
+    if max(abs(df_2.iloc[k].values)) > 400:
+        print('outlier')
+    else:
+        plt.plot(df_2.iloc[k])
+plt.show()
 # UNCOMMENT
 df = pd.concat([df_1[:size_acc], df_2[:size_acc]])
 # df = pd.concat([df_1[:], df_2[:]])
@@ -92,6 +101,7 @@ for train_index, test_index in kf.split(X, y):
     df_train, df_test = df0.iloc[list(train_index)], df0.iloc[list(test_index)]
     # df_train, df_test = train_test_split(df, test_size=0.2, random_state=1337, stratify=df[174])
     print(len(df_train), len(df_test))
+    breakpoint()
 
     Y = np.array(df_train[174].values).astype(np.int8)
     X = np.array(df_train[list(range(174))].values)[..., np.newaxis]
@@ -134,7 +144,10 @@ for train_index, test_index in kf.split(X, y):
         return model
 
 
+
+
     model = get_model()
+
     file_path = "baseline_cnn%s__kfold%s.h5" % (patient, i)
     checkpoint = ModelCheckpoint(file_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max')  # 'val_acc'
     early = EarlyStopping(monitor='val_acc', mode="max", patience=15, verbose=1)

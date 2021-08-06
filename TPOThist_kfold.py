@@ -20,10 +20,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier
 from sklearn.pipeline import make_pipeline
-from tpot.builtins import StackingEstimator
 from tpot.export_utils import set_param_recursive
 import matplotlib.pylab as plt
 
@@ -36,7 +33,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import make_pipeline, make_union
-from sklearn.neighbors import KNeighborsClassifier
 from tpot.builtins import StackingEstimator
 from sklearn.tree import export_graphviz
 
@@ -52,16 +48,13 @@ def scale_data(df):
     return dfX
 
 
-tpot_data = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_001_all3.csv', sep=',',
-                        usecols=[i for i in range(1, 8)],
+tpot_data = pd.read_csv('C:/Users/nrust/Downloads/D0_test/hist/hist_008.csv', sep=',',
+                        #usecols=[i for i in range(1, 15)],
                         dtype=np.float64, engine='python')
-
-tpot_data['target'] = pd.read_csv('C:/Users/nrust/Downloads/ECG_single_001_all3.csv', sep=',', usecols=['target'],
-                                  dtype=np.float64, engine='python')
-tpot_data = tpot_data.replace([np.inf, -np.inf], 0).dropna(axis=0)
-
+CM_all = [[0,0],[0,0]]
 # ORIGINALLY USED SCALE_DATA FUNCTION
 dfX = tpot_data
+print(dfX.describe())
 
 #df = tpot_data
 #print(df.shape[1])
@@ -75,7 +68,7 @@ dfX = tpot_data
 #    plt.show()
 #breakpoint()
 
-#dfX = (dfX-dfX.min())/(dfX.max()-dfX.min())
+dfX = (dfX-dfX.min())/(dfX.max()-dfX.min())
 
 
 #dfX['R_amp'] = (dfX['R_amp']-dfX['R_amp'].min())/(dfX['R_amp'].max()-dfX['R_amp'].min())
@@ -107,7 +100,6 @@ print(len(df[df['target'] == 0]), len(df[df['target'] == 1]))
 
 
 # END getting balanced data
-#df = df[['QTc','target']]
 
 X = np.array(df)
 y = np.array(df['target'].astype(int))
@@ -180,7 +172,6 @@ for train_index, test_index in kf.split(X, y):
 
     #print('train data\n', X_train[1])
 
-    # print(train['target'].value_counts())
     # end of undersampled
 
     X_test = np.array(test.iloc[:, :train.shape[1] - 1])
@@ -209,31 +200,38 @@ for train_index, test_index in kf.split(X, y):
 
     # Fix random state for all the steps in exported pipeline
 
-    #tpot = TPOTClassifier(verbosity=2, max_time_mins=2, scoring='f1_macro')
+    # tpot = TPOTClassifier(verbosity=2, max_time_mins=2)
 
-    tpot = RandomForestClassifier(bootstrap=False, criterion="entropy", max_features=0.55, min_samples_leaf=1,
+    tpot2 = RandomForestClassifier(bootstrap=False, criterion="entropy", max_features=0.55, min_samples_leaf=1,
                                   min_samples_split=19, n_estimators=100)
 
-
+    tpot = make_pipeline(
+        StackingEstimator(estimator=SGDClassifier(alpha=0.01, eta0=0.1, fit_intercept=True, l1_ratio=1.0,
+                                                  learning_rate="invscaling", loss="perceptron",
+                                                  penalty="elasticnet", power_t=0.1)),
+        # ZeroCount(),
+        MLPClassifier(alpha=0.01, learning_rate_init=0.01)
+    )
 
     tpot.fit(X_train, y_train)
 
-
+    """
     tree = tpot.estimators_[5]
     features = Xi.drop(columns=['target'])
 
+    
     # Export as dot file
     export_graphviz(tree,
-                    out_file='tree888.dot',
+                    out_file='tree002.dot',
                     feature_names=list(features.columns.values),
                     class_names=['normal', 'hypo'],
                     rounded=True, proportion=False,
                     precision=2, filled=True)
 
-
     print(tpot.score(X_test, y_test))
+    """
 
-    #tpot.export('tpot_008tests_%s.py' % i)
+    # tpot.export('tpot_001_%s.py' % i)
 
     target_names = ['normal', 'hypo']  # , 'hyper'
 
@@ -252,12 +250,15 @@ for train_index, test_index in kf.split(X, y):
     CM_val = confusion_matrix(y_validate, validation)
     print(report_dnn_val)
     print(CM_val)
+    CM_all = CM_all + CM_val
     acc = report_dnn_val.get('accuracy')
     prc = report_dnn_val.get('macro avg', {}).get('precision')
     sen = report_dnn_val.get('macro avg', {}).get('recall')
     acc_list = acc_list + [acc]
     prc_list = prc_list + [prc]
     sen_list = sen_list + [sen]
+
+print(CM_all)
 print('accuracy', acc_list)
 print('precision', prc_list)
 print('sensitivity', sen_list)

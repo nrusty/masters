@@ -14,15 +14,37 @@ from tpot.export_utils import set_param_recursive
 from sklearn.decomposition import FastICA
 from sklearn.tree import export_graphviz
 from sklearn import tree
+from sklearn.kernel_approximation import RBFSampler
+from sklearn.linear_model import SGDClassifier
+from tpot.builtins import StackingEstimator
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import confusion_matrix, classification_report
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
 
 #iris = load_iris()
 #iris.data[0:5], iris.target
 
-tpot_data = pd.read_csv('C:/Users/nrust/Downloads/dataset_008.csv', sep=',', usecols=[i for i in range(1,64)],
-                        dtype=np.float64, engine='python')
+tpot_data = pd.read_csv('C:/Users/nrust/Downloads/dataset_008.csv', sep=',', parse_dates=[0],
+                        usecols=[i for i in range(2,62)], dtype=np.float64, engine='python') #
+tpot_data['target'] = pd.read_csv('C:/Users/nrust/Downloads/dataset_008.csv', sep=',', parse_dates=[0],
+                        usecols=['target'], dtype=np.float64, engine='python')
+print(tpot_data.describe())
 
-tpot_data = tpot_data.replace([np.inf, -np.inf], np.nan).dropna(axis=1)
+
+#tpot_data = tpot_data.filter(['QT_mean', 'QT_median', 'QT_std', 'target'])
+tpot_data = tpot_data.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
+#tpot_data = tpot_data.drop(['ST', 'glucose', 'target'], axis=1)
+
+x = tpot_data.values #returns a numpy array
+min_max_scaler = preprocessing.MinMaxScaler()
+x_scaled = min_max_scaler.fit_transform(x)
+df = pd.DataFrame(x_scaled)
+print(tpot_data.columns.values)
+plt.boxplot(df, labels=tpot_data.columns.values, showmeans=True)
+plt.xticks(rotation=60)
+plt.show()
+
 
 fractions = np.array([0.8, 0.2])
 # shuffle your input
@@ -32,6 +54,8 @@ tpot_data, val_data = np.array_split(tpot_data, (fractions[:-1].cumsum() * len(t
 
 Xval = np.array(val_data.iloc[:, :val_data.shape[1]-1])
 yval = np.array(val_data.iloc[:, val_data.shape[1]-1])
+
+#print(sum(yval))
 #print(yval)
 #print(val_data.iloc[1, :val_data.shape[1]-1])
 
@@ -50,6 +74,7 @@ X = pd.concat([pd.DataFrame(X_train), pd.DataFrame(y_train, columns=['target'])]
 not_hypo = X[X['target'] == 0]
 hypo = X[X['target'] == 1]
 
+"""
 # upsample minority
 hypo_upsampled = resample(hypo,
                           replace=True, # sample with replacement
@@ -69,10 +94,13 @@ upsampled = pd.concat([not_hypo, hypo_upsampled])
 #X_train = np.array(upsampled.iloc[:, :upsampled.shape[1]-1])
 
 #end of undersampled
+"""
 
 #print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
 tpot = TPOTClassifier(verbosity=2, generations=5, scoring='f1_macro') # max_time_mins=2
+
+
 
 #config_dict='TPOT cuML'
 
@@ -85,7 +113,7 @@ tpot = TPOTClassifier(verbosity=2, generations=5, scoring='f1_macro') # max_time
 tpot.fit(X_train, y_train)
 print(tpot.score(X_test, y_test))
 
-tpot.export('tpot_TEMPORARY008_up.py')
+#tpot.export('tpot_HIST1_up.py')
 
 
 # Classification report
