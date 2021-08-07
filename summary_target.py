@@ -6,7 +6,7 @@ import os
 import padasip as pa
 import datetime
 
-participant = '002'
+participant = '001'
 
 sampling_rate = 250
 
@@ -18,7 +18,7 @@ epochs = {}
 data2 = []
 
 
-tgt = pd.read_csv(fr'C:\Users\nrust\Downloads\Target_%s.csv' % participant, sep=",", parse_dates=[0],
+tgt = pd.read_csv(fr'C:\Users\nrust\Downloads\Target_%s_new.csv' % participant, sep=",", parse_dates=[0],
                   dayfirst=True, engine='python')
 print(tgt['date_time'].head())
 
@@ -45,7 +45,7 @@ for i, file in enumerate(all_files[1:]):
             print(total_q.describe())
     clean_hist = total_q['SystemConfidence'].replace([np.inf, -np.inf], 0).dropna(axis=0)
     plt.hist(clean_hist, bins=100)
-    plt.show()
+plt.show()
 
 print(total_q)
-total_q.to_csv(fr'C:\Users\nrust\Downloads\qlty_%s.csv' % participant, sep=",", index=False)
+total_q.to_csv(fr'C:\Users\nrust\Downloads\qlty_sec_%s.csv' % participant, sep=",", index=False)
